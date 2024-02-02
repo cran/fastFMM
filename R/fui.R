@@ -365,10 +365,20 @@ fui <- function(formula,
 
       # Fill in missing values of the raw data using FPCA
       if(length(which(is.na(data[,out_index]))) != 0){
-        data[,out_index][which(is.na(data[,out_index]))] <-
-          suppressWarnings( refund::fpca.face(as.matrix(data[,out_index]),
-                                              argvals = argvals,
-                                              knots = nknots_fpca)$Yhat[which(is.na(data[,out_index]))] )
+        message(paste("Imputing", length(out_index), "values in functional response with longitudinal functional PCA" ))
+        if(length(out_index) != 1){
+          tmp <- as.matrix(data[,out_index])
+          tmp[which(is.na(tmp))] <-
+            suppressWarnings( refund::fpca.face(tmp,
+                                                argvals = argvals,
+                                                knots = nknots_fpca)$Yhat[which(is.na(tmp))] )
+          data[,out_index] <- tmp
+        }else{
+          data[,out_index][which(is.na(data[,out_index]))] <-
+            suppressWarnings( refund::fpca.face(as.matrix(data[,out_index]),
+                                                argvals = argvals,
+                                                knots = nknots_fpca)$Yhat[which(is.na(data[,out_index]))] )
+        }
       }
 
       # Derive variance estimates of random components: H(s), R(s)
@@ -1152,6 +1162,8 @@ fui <- function(formula,
           return(V)
         }else if(length(eigen.positive) == 0){
           return(tcrossprod(edcomp$vectors[,1]) * edcomp$values[1])
+        }else if(length(eigen.positive) == 1){
+          return(tcrossprod(as.vector(edcomp$vectors[,1])) * as.numeric(edcomp$values[1]))
         }else{
           # sum of outerproducts of eigenvectors scaled by eigenvalues for all positive eigenvalues
           return(matrix(edcomp$vectors[,eigen.positive] %*% tcrossprod(Diagonal(x=edcomp$values[eigen.positive]), edcomp$vectors[,eigen.positive]), ncol = q))

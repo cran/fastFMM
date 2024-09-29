@@ -30,11 +30,11 @@ knit_hooks$set(output = function(x, options) {
    hook_output(x, options)
  })
 
-## ---- eval=FALSE--------------------------------------------------------------
+## ----eval=FALSE---------------------------------------------------------------
 #  library(devtools)
 #  install_github("gloewing/fastFMM")
 
-## ---- eval = FALSE------------------------------------------------------------
+## ----eval = FALSE-------------------------------------------------------------
 #  # install packages (will only install them for the first time)
 #  list.of.packages = c("lme4", "parallel", "cAIC4", "magrittr","dplyr",
 #                        "mgcv", "MASS", "lsei", "refund","stringr", "Matrix", "mvtnorm",
@@ -70,19 +70,19 @@ library(fastFMM) # load our package
 dat <- read.csv("time_series.csv") # read in data
 head(dat[,1:6])
 
-## ---- eval = FALSE------------------------------------------------------------
+## ----eval = FALSE-------------------------------------------------------------
 #  Y_mat <- dat[,-seq(1,3)]
 #  head(Y_mat[,1:5])
 
-## ---- eval = FALSE------------------------------------------------------------
+## ----eval = FALSE-------------------------------------------------------------
 #  dat <- data.frame(Y = Y_mat, dat[,seq(1,3)])
 
-## ---- eval = FALSE------------------------------------------------------------
+## ----eval = FALSE-------------------------------------------------------------
 #  mod <- fui(Y ~ treatment + # main effect of cue
 #                    (1 | id),  # random intercept
 #                  data = dat)
 
-## ---- eval = FALSE------------------------------------------------------------
+## ----eval = FALSE-------------------------------------------------------------
 #  Y_mat <- dat[,-seq(1,3)]
 #  L <- ncol(Y_mat) # number of columns of functional outcome
 #  
@@ -112,7 +112,7 @@ mod2 <- fui(Y ~ treatment + # main effect of cue
 colMeans(mod1$aic)
 colMeans(mod2$aic)
 
-## ---- eval = FALSE------------------------------------------------------------
+## ----eval = FALSE-------------------------------------------------------------
 #  mod <- fui(Y ~ treatment + # main effect of cue
 #                    (treatment | id/trial),  # random intercept
 #                    data = dat,

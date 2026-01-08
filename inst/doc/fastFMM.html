@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<meta name="author" content="Gabriel Loewinger, Erjia Cui, Al W Xin" />
+
+<meta name="date" content="2026-01-06" />
+
+<title>Introduction to fastFMM model fitting</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+<style type="text/css">
+
+div.csl-bib-body { }
+div.csl-entry {
+clear: both;
+margin-bottom: 0em;
+}
+.hanging div.csl-entry {
+margin-left:2em;
+text-indent:-2em;
+}
+div.csl-left-margin {
+min-width:2em;
+float:left;
+}
+div.csl-right-inline {
+margin-left:2em;
+padding-left:1em;
+}
+div.csl-indent {
+margin-left: 2em;
+}
+</style>
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Introduction to fastFMM model fitting</h1>
+<h4 class="author">Gabriel Loewinger, Erjia Cui, Al W Xin</h4>
+<h4 class="date">2026-01-06</h4>
+
+
+
+<div id="introduction" class="section level2">
+<h2>Introduction</h2>
+<p><code>fastFMM</code> is a toolkit for fitting functional mixed models
+(FMMs). This package implements the fast univariate inference (FUI)
+method proposed in <span class="citation">Cui et al. (<a href="#ref-cui_fast_2022">2022</a>)</span> and further described in
+<span class="citation">Loewinger et al. (<a href="#ref-loewinger_statistical_2025">2025</a>)</span> and <span class="citation">Xin et al. (<a href="#ref-xin_capturing_2025">2025</a>)</span>. In this vignette, we
+provide a tutorial on how to use the <code>fui</code> function to fit
+non-concurrent and concurrent FMMs.</p>
+<div id="installation" class="section level3">
+<h3>Installation</h3>
+<p><code>fastFMM</code> is available on CRAN, and can be installed in
+the usual way, i.e.,</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">install.packages</span>(<span class="st">&quot;fastFMM&quot;</span>)</span></code></pre></div>
+<p>The development version of the package can be downloaded from <a href="https://github.com/awqx/fastFMM">GitHub</a> with
+<code>devtools</code>, i.e.,</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">require</span>(<span class="st">&quot;devtools&quot;</span>)) <span class="fu">install.packages</span>(<span class="st">&quot;devtools&quot;</span>)</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>devtools<span class="sc">::</span><span class="fu">install_github</span>(<span class="st">&quot;awqx/fastFMM&quot;</span>, <span class="at">dependencies =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
+<p>The remainder of this vignette assumes that <code>fastFMM</code> is
+loaded, i.e.,</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="fu">library</span>(fastFMM)</span></code></pre></div>
+</div>
+</div>
+<div id="fast-univariate-inference-fui" class="section level2">
+<h2>Fast univariate inference (FUI)</h2>
+<p>Let <span class="math inline">\(Y_{i, j} (s)\)</span> be observations
+of multi-level/longitudinal functional data on the compact functional
+domain <span class="math inline">\(\mathcal{S} = \{s_1, s_2, \dots,
+s_L\}\)</span>. Let <span class="math inline">\(i = 1, 2, ...,
+I\)</span> be the index of the subject and <span class="math inline">\(j
+= 1, 2, ..., J_i\)</span> be the index of longitudinal visit at time
+<span class="math inline">\(t_{i, j}\)</span>. For each visit of each
+subject, we observe the fixed effects column vector <span class="math inline">\(\mathbf{X}_{i, j} = [X_{i, j, 1}, X_{i, j, 2},
+\dots, X_{i, j, p}]^T \in \mathbb{R}^p\)</span> and the random effects
+column vector <span class="math inline">\(\mathbf{Z}_{ij} = [Z_{i, j,
+1}, Z_{i, j, 2}, ..., Z_{i, j, q}]^T \in \mathbb{R}^q\)</span>. Let
+<span class="math inline">\(g(\cdot)\)</span> be some pre-specified link
+function and <span class="math inline">\(EF(\cdot)\)</span> be some
+exponential family distribution. A longitudinal function-on-scalar
+regression model has the form</p>
+<p><span class="math display">\[
+\begin{aligned}
+  &amp; Y_{ij}(s) \sim EF\{\mu_{ij}(s)\}, \\
+  &amp; g\{\mu_{ij}(s)\} = \eta_{ij}(s) =
+\boldsymbol{X}_{ij}^T\boldsymbol{\beta}(s) +
+\boldsymbol{Z}_{ij}^T\boldsymbol{u}_i(s),
+\end{aligned}
+\]</span></p>
+<p>referred to as a functional mixed model (FMM) in the functional data
+analysis (FDA) literature. Many statistical methods have been proposed
+to fit FMMs, and generally fall into two categories: joint methods and
+marginal methods. FUI is a marginal method that is computationally fast
+and achieves similar estimation accuracy compared with the
+state-of-the-art joint method, such as the <code>refund::pffr()</code>
+function.</p>
+<p>FUI consists of the following three steps:</p>
+<ol style="list-style-type: decimal">
+<li><em>Fit univariate models</em>. Fit separate linear mixed models at
+every point along the functional domain <span class="math inline">\(\mathcal{S}\)</span>. That is, at each location
+<span class="math inline">\(s_l \in \mathcal{S}, l = 1, 2, ...,
+L\)</span>, we fit a pointwise generalized linear mixed model (GLMM) of
+the form</li>
+</ol>
+<p><span class="math display">\[
+\begin{aligned}
+  &amp; Y_{i, j}(s_l) \sim EF\{\mu_{i,j}(s_l)\}, \\
+  &amp; g\{\mu_{i, j}(s_l)\} = \eta_{i,j}(s_l) =
+\boldsymbol{X}_{i,j}^T\boldsymbol{\beta}(s_l) +
+\boldsymbol{Z}_{i,j}^T\boldsymbol{u}_i(s_l),
+\end{aligned}
+\]</span> where <span class="math inline">\(\boldsymbol{\beta}(s_l)\)</span> is a <span class="math inline">\(p \times 1\)</span> dimensional vector of fixed
+effects and <span class="math inline">\(\boldsymbol{u}_i(s_l)\)</span>
+is a <span class="math inline">\(q \times 1\)</span> dimensional vector
+of random effects. Let <span class="math inline">\(\boldsymbol{\tilde{\beta}}(s_1),
+\boldsymbol{\tilde{\beta}}(s_2), ...,
+\boldsymbol{\tilde{\beta}}(s_L)\)</span> be the estimates of fixed
+effects from <span class="math inline">\(L\)</span> separate univariate
+GLMMs.</p>
+<ol start="2" style="list-style-type: decimal">
+<li><em>Smooth coefficients</em>. Using penalized splines, aggregate and
+smooth the coefficient estimates <span class="math inline">\(\boldsymbol{\tilde{\beta}}(s_1),
+\boldsymbol{\tilde{\beta}}(s_2), ...,
+\boldsymbol{\tilde{\beta}}(s_L)\)</span> to produce estimates <span class="math inline">\(\{\boldsymbol{\hat{\beta}}(s), s \in
+\mathcal{S}\}\)</span>.</li>
+<li><em>Build pointwise and joint confidence intervals</em>. Combine the
+within-timepoint variance and the between-timepoint covariance to create
+confidence bands around the smoothed estimates from Step 2. For Gaussian
+data, we can obtain these estimates analytically. For other
+distributions, we implement cluster bootstrap.</li>
+</ol>
+<p>FUI decomposes the complex correlation structure into longitudinal
+and functional directions, allowing for a computationally efficient
+estimation procedure. <span class="citation">Cui et al. (<a href="#ref-cui_fast_2022">2022</a>)</span> contains additional details
+on the theoretical derivation of the analytic and bootstrap approach to
+model fitting.</p>
+<div id="additional-references" class="section level3">
+<h3>Additional references</h3>
+<p>We describe applications of <code>fastFMM</code> to photometry signal
+analysis in <span class="citation">Loewinger et al. (<a href="#ref-loewinger_statistical_2025">2025</a>)</span> and <span class="citation">Xin et al. (<a href="#ref-xin_capturing_2025">2025</a>)</span>. In <span class="citation">Loewinger et al. (<a href="#ref-loewinger_statistical_2025">2025</a>)</span>, we extend the
+FUI approach to general random effects specifications. Furthermore, we
+detailed advantages of functional mixed modeling over conventional
+photometry analysis methods, including the ability to generate
+hypothesis tests at every trial timepoint, incorporate the photometry
+signal for every animal and trial, capture nested effects, and compare
+temporal dynamics. In <span class="citation">Xin et al. (<a href="#ref-xin_capturing_2025">2025</a>)</span>, we extend FUI to
+concurrent FLMMs. In particular, we described particular cases where
+concurrent FMMs produce more interpretable coefficient estimates, such
+as when behaviors vary over time or when experiments produce varying
+trial lengths.</p>
+</div>
+</div>
+<div id="data-organization" class="section level2">
+<h2>Data organization</h2>
+<p>The function <code>fastFMM::fui</code> requires that data be
+presented in a long format with respect to the functional domain. I.e.,
+columns correspond to locations on the functional domain <span class="math inline">\(1, 2, \dots, L\)</span> and rows correspond to
+longitudinal observations <span class="math inline">\(t_{i, j}\)</span>.
+The functional variables can be single matrix columns or span multiple
+columns, described further below.</p>
+<div id="example-data" class="section level3">
+<h3>Example data</h3>
+<p>Within <code>fastFMM</code>, we provide the pre-formatted dataset
+<code>lick</code>, sourced from <span class="citation">Jeong et al. (<a href="#ref-jeong_mesolimbic_2022">2022</a>)</span>. The
+<code>lick</code> dataset importable through <code>fastFMM</code> is a
+downsampled version of the original, containing half as many trials and
+half as many within-trial timepoints. The dataset contains <span class="math inline">\(N = \sum_{i = 1}^I n_i\)</span> rows, where <span class="math inline">\(n_i\)</span> is the number of repeated measures
+observations of subject/cluster <span class="math inline">\(i\)</span>.
+The first three columns of the dataset include the covariates subject ID
+(<code>id</code>), session number (<code>session</code>), and trial
+number (<code>trial</code>).</p>
+<p>The functional outcome and covariate (<code>photometry</code> and
+<code>lick</code>, respectively) are stored in matrix columns of
+dimension <span class="math inline">\(N \times L\)</span> each, where
+<span class="math inline">\(L\)</span> is the size of the functional
+domain. <code>lick</code> records whether a mouse is licking at some
+time, with indices aligned with the <code>photometry</code> recordings.
+<code>fastFMM::fui</code> automatically detects which of the covariates
+are functional with initial string matching, so the names of variables
+should be unique and not share prefixes. Furthermore,
+<code>fastFMM::fui</code> assumes any functional columns are ordered
+from left to right.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>lick <span class="ot">&lt;-</span> fastFMM<span class="sc">::</span>lick</span></code></pre></div>
+</div>
+<div id="matrix-columns-or-multiple-vector-columns" class="section level3">
+<h3>Matrix columns or multiple vector columns</h3>
+<p>As mentioned previously, the <code>photometry</code> and
+<code>lick</code> are matrix columns of dimension <span class="math inline">\(N \times L\)</span>, where <span class="math inline">\(n\)</span> is the number of observations and <span class="math inline">\(L\)</span> is the length of the functional
+domain.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="fu">class</span>(lick<span class="sc">$</span>photometry)</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a><span class="co">#&gt; [1] &quot;matrix&quot; &quot;array&quot;</span></span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a><span class="fu">dim</span>(lick<span class="sc">$</span>photometry)</span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a><span class="co">#&gt; [1] 2120   43</span></span></code></pre></div>
+<p><code>fastFMM::fui</code> can also handle functional data where the
+functional variables are stored in multiple normal numeric columns with
+the same prefix. <code>fastFMM::fui()</code> can handle data in either
+form, and there are no particular modeling differences between matrices
+or separate numeric columns. Below is an example of how to convert the
+matrix format into separate columns.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>lick <span class="ot">&lt;-</span> <span class="fu">cbind</span>(</span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>  lick <span class="sc">%&gt;%</span> <span class="fu">select</span>(<span class="sc">-</span>photometry, <span class="sc">-</span>lick), </span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>  <span class="co"># this unravels the matrices into data frames</span></span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>  <span class="fu">as.data.frame</span>(lick<span class="sc">$</span>photometry), </span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>  <span class="fu">as.data.frame</span>(lick<span class="sc">$</span>lick)</span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a>)</span></code></pre></div>
+<p>Now, the functional outcome of <code>photometry</code> is stored in
+the columns <code>photometry_1, photometry_2, ..., photometry_43</code>
+and the functional covariate <code>lick</code> is stored in the columns
+<code>lick_1, lick_2, ..., lick_43</code>. The remaining examples will
+include the latter (separate numeric columns) because it is easier to
+visualize.</p>
+</div>
+<div id="scalar-covariates" class="section level3">
+<h3>Scalar covariates</h3>
+<p>In this dataset, we calculated <code>lick_rate_NNN</code> as an
+example trial-specific behavioral summary. The covariate
+<code>lick_rate_NNN</code> is the average licking rate in the
+<code>NNN</code> hundredths of seconds after the reward is delivered. We
+provide calculated lick rates for four different time periods: 0.5, 1.0,
+1.5, and 2.0 seconds, named <code>lick_rate_050</code>,
+<code>lick_rate_100</code>, <code>lick_rate_150</code>, and
+<code>lick_rate_200</code>. We also provide the covariate
+<code>iri</code>, which corresponds to the inter-reward interval, though
+we do not model it in this vignette.</p>
+<table>
+<colgroup>
+<col width="11%" />
+<col width="8%" />
+<col width="20%" />
+<col width="20%" />
+<col width="20%" />
+<col width="20%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="right">session</th>
+<th align="right">trial</th>
+<th align="right">lick_rate_050</th>
+<th align="right">lick_rate_100</th>
+<th align="right">lick_rate_150</th>
+<th align="right">lick_rate_200</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">1</td>
+<td align="right">2</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">0.6666667</td>
+<td align="right">2.0</td>
+</tr>
+<tr class="even">
+<td align="right">1</td>
+<td align="right">3</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">0.6666667</td>
+<td align="right">2.5</td>
+</tr>
+<tr class="odd">
+<td align="right">1</td>
+<td align="right">4</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">0.0000000</td>
+<td align="right">0.0</td>
+</tr>
+<tr class="even">
+<td align="right">1</td>
+<td align="right">5</td>
+<td align="right">2</td>
+<td align="right">4</td>
+<td align="right">6.0000000</td>
+<td align="right">6.0</td>
+</tr>
+<tr class="odd">
+<td align="right">1</td>
+<td align="right">6</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">2.6666667</td>
+<td align="right">4.5</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="functional-covariates" class="section level3">
+<h3>Functional covariates</h3>
+<p>Below is an excerpt from <code>lick</code> with a few observations
+from the functional outcome of <code>photometry</code> and the
+functional covariate of <code>lick</code>.</p>
+<table style="width:100%;">
+<colgroup>
+<col width="10%" />
+<col width="9%" />
+<col width="7%" />
+<col width="15%" />
+<col width="15%" />
+<col width="15%" />
+<col width="8%" />
+<col width="8%" />
+<col width="8%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">id</th>
+<th align="right">session</th>
+<th align="right">trial</th>
+<th align="right">photometry_1</th>
+<th align="right">photometry_2</th>
+<th align="right">photometry_3</th>
+<th align="right">lick_1</th>
+<th align="right">lick_2</th>
+<th align="right">lick_3</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">HJ-FP-M2</td>
+<td align="right">1</td>
+<td align="right">2</td>
+<td align="right">0.4526675</td>
+<td align="right">-0.3509867</td>
+<td align="right">-0.6834084</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">0</td>
+</tr>
+<tr class="even">
+<td align="left">HJ-FP-M2</td>
+<td align="right">1</td>
+<td align="right">3</td>
+<td align="right">-0.7800289</td>
+<td align="right">-1.6803674</td>
+<td align="right">-2.0050823</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">0</td>
+</tr>
+<tr class="odd">
+<td align="left">HJ-FP-M2</td>
+<td align="right">1</td>
+<td align="right">4</td>
+<td align="right">-0.5362578</td>
+<td align="right">1.0239016</td>
+<td align="right">2.1075211</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">0</td>
+</tr>
+<tr class="even">
+<td align="left">HJ-FP-M2</td>
+<td align="right">1</td>
+<td align="right">5</td>
+<td align="right">1.7820389</td>
+<td align="right">1.6070177</td>
+<td align="right">0.8722584</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">0</td>
+</tr>
+<tr class="odd">
+<td align="left">HJ-FP-M2</td>
+<td align="right">1</td>
+<td align="right">6</td>
+<td align="right">4.1497110</td>
+<td align="right">4.2673891</td>
+<td align="right">4.0482130</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">0</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div id="model-fitting" class="section level2">
+<h2>Model-fitting</h2>
+<p>Unless otherwise specified, <code>fastFMM::fui()</code> assumes a
+Gaussian family and provides inference based on an analytic form. To
+bootstrap confidence intervals, set the argument
+<code>analytic = FALSE</code>. The number of bootstrap replicates can be
+set with the argument <code>boot</code>, which defaults to
+<code>boot = 500</code>. Within these examples, we will skip
+demonstrations of bootstrapped intervals for brevity.</p>
+<p>The time to fit both analytic and bootstrap inference models can be
+reduced by parallelizing the univariate model-fitting with
+<code>parallel = TRUE</code>. For analytic variance calculation,
+<code>parallel = TRUE</code> also parallelizes the calculation of the
+fixed effects covariance matrix. If <code>parallel = TRUE</code>, the
+number of cores must be specified as <code>n_cores</code> (for personal
+machines, three-quarters of the available cores is reasonable). To speed
+up model comparisons, variance calculation can be skipped entirely by
+setting <code>var = FALSE</code>. The <code>AIC</code> and
+<code>BIC</code> will still be outputted in the model objects.</p>
+<p><code>fastFMM::fui()</code> uses the same mixed model formula
+structure as <code>lme4::lmer()</code> <span class="citation">(<a href="#ref-nlme_2025">Pinheiro, Bates, and R Core Team 2025</a>)</span>.
+The <code>family</code> argument is the standard GLM family from
+<code>R</code> <code>stats::glm()</code>. <code>fastFMM</code> allows
+for any family in the <code>glmer()</code> and <code>lmer()</code>
+functions offered by the <code>lme4</code> package. For any complex
+random effect structures (e.g., nested) or when more than one variable
+is specified on the right hand side of the <code>|</code> symbol in the
+random effects formula , the column name in the <code>data</code>
+data.frame corresponding to the subject-ID should be specified in the
+argument <code>subj_ID</code> to avoid any confusion. E.g., for a model
+with the random effect structure <code>(1 | id / trial)</code>, we would
+provide <code>fui()</code> with the argument
+<code>subj_ID = &quot;id&quot;</code>.</p>
+<p>Providing a vector of indices of the functional outcome to
+<code>argvals</code> can be used to downsample model-fitting to only a
+subset of the functional domain. For example,
+<code>argvals = seq(from = 1, to = L, by = 3)</code> analyzes every
+third point of the functional outcome. This is only compatible with
+bootstrapped variance estimates (i.e.,
+<code>analytic = FALSE</code>).</p>
+<div id="non-concurrent-fmm-fitting" class="section level3">
+<h3>Non-concurrent FMM fitting</h3>
+<p>The function <code>fastFMM::fui</code> assumes models are
+non-concurrent by default. We can generate a few candidate models and
+compare their AIC/BIC as follows:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="co"># Random intercept </span></span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>mod1 <span class="ot">&lt;-</span> <span class="fu">fui</span>(</span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>  photometry <span class="sc">~</span> lick_rate_050 <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> id), </span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a>  <span class="at">data =</span> lick, <span class="at">var =</span> <span class="cn">FALSE</span>, <span class="at">silent =</span> <span class="cn">TRUE</span> </span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a>)</span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a></span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a><span class="co"># Random slope and intercept</span></span>
+<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a>mod2 <span class="ot">&lt;-</span> <span class="fu">fui</span>(</span>
+<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a>  photometry <span class="sc">~</span> lick_rate_050 <span class="sc">+</span> (lick_rate_050 <span class="sc">|</span> id), </span>
+<span id="cb7-10"><a href="#cb7-10" tabindex="-1"></a>  <span class="at">data =</span> lick, <span class="at">var =</span> <span class="cn">FALSE</span>, <span class="at">silent =</span> <span class="cn">TRUE</span> </span>
+<span id="cb7-11"><a href="#cb7-11" tabindex="-1"></a>)</span>
+<span id="cb7-12"><a href="#cb7-12" tabindex="-1"></a></span>
+<span id="cb7-13"><a href="#cb7-13" tabindex="-1"></a><span class="co"># Fixed effects for trial and session, radom intercept and slope</span></span>
+<span id="cb7-14"><a href="#cb7-14" tabindex="-1"></a>mod3 <span class="ot">&lt;-</span> <span class="fu">fui</span>(</span>
+<span id="cb7-15"><a href="#cb7-15" tabindex="-1"></a>  photometry <span class="sc">~</span> lick_rate_050 <span class="sc">+</span> trial <span class="sc">+</span> session <span class="sc">+</span> (lick_rate_050 <span class="sc">|</span> id), </span>
+<span id="cb7-16"><a href="#cb7-16" tabindex="-1"></a>  <span class="at">data =</span> lick, <span class="at">var =</span> <span class="cn">FALSE</span>, <span class="at">silent =</span> <span class="cn">TRUE</span> </span>
+<span id="cb7-17"><a href="#cb7-17" tabindex="-1"></a>)</span></code></pre></div>
+<pre><code>#&gt; Model 1 AIC: 8894.4  BIC: 8917
+#&gt; Model 2 AIC: 8840.7  BIC: 8874.7
+#&gt; Model 3 AIC: 8831    BIC: 8876.3</code></pre>
+<p>Once we select a model (here, we choose Model 3), we can run the full
+analytic variance calculation by removing <code>var = FALSE</code>. We
+show the results in the Section “Plotting models” later in this
+vignette.</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a>lick_rate_050 <span class="ot">&lt;-</span> <span class="fu">fui</span>(</span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a>  photometry <span class="sc">~</span> lick_rate_050 <span class="sc">+</span> trial <span class="sc">+</span> session <span class="sc">+</span> (lick_rate_050 <span class="sc">|</span> id), </span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a>  <span class="at">data =</span> lick, </span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a>  <span class="at">silent =</span> <span class="cn">TRUE</span></span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a>)</span></code></pre></div>
+</div>
+<div id="concurrent-fmm-fitting" class="section level3">
+<h3>Concurrent FMM fitting</h3>
+<p>To fit a concurrent model, set the argument
+<code>concurrent = TRUE</code>. <code>fastFMM::fui()</code> will
+automatically detect which covariates are functional based on matching
+their names. We will skip over AIC/BIC calculation for brevity and fit a
+concurrent model with variance calculation. Importantly, we need to
+remove the scalar covariates <code>lick_rate_NNN</code> before model
+fitting because their names will interfere with detecting the columns
+for <code>lick</code>.</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="co"># Remove conflicting columns</span></span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a>lick_ <span class="ot">&lt;-</span> dplyr<span class="sc">::</span><span class="fu">select</span>(lick, <span class="sc">-</span>lick_rate_050<span class="sc">:-</span>lick_rate_200)</span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a>lick_conc <span class="ot">&lt;-</span> <span class="fu">fui</span>(</span>
+<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a>  photometry <span class="sc">~</span> lick <span class="sc">+</span> trial <span class="sc">+</span> session <span class="sc">+</span> (lick <span class="sc">|</span> id), </span>
+<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a>  <span class="at">data =</span> lick_, </span>
+<span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a>  <span class="at">concurrent =</span> <span class="cn">TRUE</span>, </span>
+<span id="cb10-7"><a href="#cb10-7" tabindex="-1"></a>  <span class="co"># uncomment the below line to parallelize the calculation</span></span>
+<span id="cb10-8"><a href="#cb10-8" tabindex="-1"></a>  <span class="co"># parallel = TRUE, n_cores = 4, </span></span>
+<span id="cb10-9"><a href="#cb10-9" tabindex="-1"></a>  <span class="at">silent =</span> <span class="cn">TRUE</span></span>
+<span id="cb10-10"><a href="#cb10-10" tabindex="-1"></a>)</span></code></pre></div>
+</div>
+</div>
+<div id="plotting-models" class="section level2">
+<h2>Plotting models</h2>
+<p>After fitting a model, one can quickly visualize estimates and 95%
+confidence intervals with the function <code>fastFMM::plot_fui()</code>,
+which works for both non-concurrent and concurrent models. Although the
+label for the functional covariates’ fixed coefficients correspond to
+the first covariate name, e.g., <code>lick_1</code>, the plotted
+coefficients reflect the appropriate coefficients for
+<code>lick_1</code> to <code>lick_43</code>.</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a><span class="co"># Sending outputs to a dummy variable makes the output cleaner</span></span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a>dummy <span class="ot">&lt;-</span> fastFMM<span class="sc">::</span><span class="fu">plot_fui</span>(lick_rate_050)</span></code></pre></div>
+<p><img role="img" src="data:image/png;base64,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" /><!-- --></p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a>dummy <span class="ot">&lt;-</span> fastFMM<span class="sc">::</span><span class="fu">plot_fui</span>(lick_conc)</span></code></pre></div>
+<p><img role="img" src="data:image/png;base64,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" /><!-- --></p>
+<p>The x-axis can be translated and scaled with the arguments
+<code>x_rescale</code> and <code>x_align</code>. For example, because
+the x-axis is time in these models, we can rescale the x-values based on
+sampling rate and align the y-axis with the trial start time.
+Furthermore, the number of rows in the plot can be adjusted with
+<code>nrow</code>. Each coefficient’s plot can be given a plot title
+through the vector argument <code>title_names</code> and the x-axis can
+be named through the <code>xlab</code> argument.</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a>align_time <span class="ot">&lt;-</span> <span class="fl">0.4</span> <span class="co"># cue onset is at 2 seconds</span></span>
+<span id="cb13-2"><a href="#cb13-2" tabindex="-1"></a>sampling_Hz <span class="ot">&lt;-</span> <span class="fl">12.5</span> <span class="co"># sampling rate</span></span>
+<span id="cb13-3"><a href="#cb13-3" tabindex="-1"></a><span class="co"># plot titles: interpretation of beta coefficients</span></span>
+<span id="cb13-4"><a href="#cb13-4" tabindex="-1"></a>plot_names <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;Intercept&quot;</span>, <span class="st">&quot;Lick(s)&quot;</span>, <span class="st">&quot;Trial&quot;</span>, <span class="st">&quot;Session&quot;</span>) </span>
+<span id="cb13-5"><a href="#cb13-5" tabindex="-1"></a>lick_conc_outs <span class="ot">&lt;-</span> <span class="fu">plot_fui</span>(</span>
+<span id="cb13-6"><a href="#cb13-6" tabindex="-1"></a>  lick_conc,</span>
+<span id="cb13-7"><a href="#cb13-7" tabindex="-1"></a>  <span class="at">x_rescale =</span> sampling_Hz, <span class="co"># rescale x-axis to sampling rate</span></span>
+<span id="cb13-8"><a href="#cb13-8" tabindex="-1"></a>  <span class="at">align_x =</span> align_time, <span class="co"># align to cue onset</span></span>
+<span id="cb13-9"><a href="#cb13-9" tabindex="-1"></a>  <span class="at">title_names =</span> plot_names,</span>
+<span id="cb13-10"><a href="#cb13-10" tabindex="-1"></a>  <span class="at">xlab =</span> <span class="st">&quot;Time (s)&quot;</span>,</span>
+<span id="cb13-11"><a href="#cb13-11" tabindex="-1"></a>  <span class="at">num_row =</span> <span class="dv">2</span>, </span>
+<span id="cb13-12"><a href="#cb13-12" tabindex="-1"></a>  <span class="at">return =</span> <span class="cn">TRUE</span></span>
+<span id="cb13-13"><a href="#cb13-13" tabindex="-1"></a>) </span></code></pre></div>
+<p><img role="img" src="data:image/png;base64,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" /><!-- --></p>
+<p>By setting <code>return = TRUE</code>, the regression coefficient
+estimates and associated pointwise and joint 95% confidence intervals
+are outputted from the <code>plot_fui()</code> function as a list with
+<span class="math inline">\(p + 1\)</span> elements, one for each fixed
+effect and an extra entry for plotting details. Each element in that
+list (named according to the corresponding fixed effects covariate) is
+an <span class="math inline">\(L \times L\)</span> data-frame of
+coefficient estimates and 95% CIs (recall that <span class="math inline">\(L\)</span> is the size of the functional
+domain).</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a><span class="fu">names</span>(lick_conc_outs)</span>
+<span id="cb14-2"><a href="#cb14-2" tabindex="-1"></a><span class="co">#&gt; [1] &quot;(Intercept)&quot; &quot;lick_1&quot;      &quot;trial&quot;       &quot;session&quot;     &quot;plot&quot;</span></span></code></pre></div>
+</div>
+<div id="advanced-options" class="section level2">
+<h2>Advanced Options</h2>
+<div id="additional-fui-arguments" class="section level3">
+<h3>Additional <code>fui()</code> arguments</h3>
+<ul>
+<li><code>silent</code> (default <code>FALSE</code>) controls whether
+<code>fui()</code> outputs the status of the code at each step.</li>
+<li><code>nknots_min</code> (default is <span class="math inline">\(L/2\)</span>) sets the number of knots for
+smoothing.</li>
+<li><code>smooth_method</code> (default <code>&quot;GCV.Cp&quot;</code>) sets the
+method for tuning the smoothing hyperparameter (see <code>mgcv</code>
+package for more information). Options are <code>GCV</code> and
+<code>GCV.Cp</code> and <code>REML</code>.</li>
+<li><code>splines</code> (default <code>&quot;tp&quot;</code>) controls the type
+of spline. See the <code>smooth.terms</code> page from the
+<code>mgcv</code> package for more information. Options include
+<code>&quot;tp&quot;</code>, <code>&quot;ts&quot;</code>, <code>&quot;cr&quot;</code>,
+<code>&quot;cs&quot;</code> <code>&quot;te&quot;</code>, <code>&quot;ds&quot;</code>,
+<code>&quot;bs&quot;</code>, <code>&quot;gp&quot;</code>, etc.</li>
+<li><code>design_mat</code> (default <code>FALSE</code>) specifies
+whether the design matrix is returned.</li>
+<li><code>residuals</code> (default <code>FALSE</code>) specifies
+whether the residuals of the univariate GLMM fits are returned.</li>
+<li><code>G_return</code> (default <code>FALSE</code>) specifies whether
+the covariance matrices <span class="math inline">\(G()\)</span> are
+returned. See <a href="https://doi.org/10.1080/10618600.2021.1950006">Cui et
+al. (2022)</a> for more information.</li>
+<li><code>caic</code> (default <code>FALSE</code>) specifies whether the
+conditional AIC model fit criteria are returned alongside
+<code>AIC</code> and <code>BIC</code>. Conditional AIC is calculated
+with <a href="https://cran.r-project.org/package=cAIC4">cAIC4</a>.</li>
+<li><code>REs</code> (default <code>FALSE</code>) specifies whether the
+BLUP random effect estimates from the univariate GLMM fits are returned.
+These estimates are directly taken from the output of
+<code>lmer()</code> and <code>glmer()</code>.</li>
+<li><code>non_neg</code> (default <code>non_nef = 0</code>) specifies
+whether any non-negativity constraints are placed on variance terms in
+the Method of Moments estimator for <span class="math inline">\(G()\)</span>. We recommend keeping this at its
+default.</li>
+<li><code>MoM</code> (default <code>MoM = 1</code>) specifies the type
+of Method of Moments estimator for <span class="math inline">\(G()\)</span>. <code>MoM = 2</code> saves all
+random effects for the covariance matrix calculation, providing more
+guaranteed statistical performance at the cost of computational burden.
+Concurrent models can only use <code>MoM = 1</code>.</li>
+</ul>
+</div>
+<div id="additional-plot_fui-arguments" class="section level3">
+<h3>Additional <code>plot_fui()</code> arguments</h3>
+<ul>
+<li><code>num_row</code> specifies the number of rows the plots will be
+displayed on. Defaults to <span class="math inline">\(p/2\)</span></li>
+<li><code>align_x</code> aligns the plot to a certain point on the
+functional domain and sets this as ``0.’’ This is particularly useful if
+time is the functional domain. Defaults to 0.</li>
+<li><code>x_rescale</code> rescales the x-axis of plots which is
+especially useful if time is the functional domain and one wishes to,
+for example, account for the sampling rate. Defaults to 1.</li>
+<li><code>title_names</code> Allows one to change the titles of the
+plots. Takes in a vector of strings. Defaults to NULL which uses the
+variable names in the dataframe for titles.</li>
+<li><code>y_val_lim</code> is a positive scalar that extends the y-axis
+by a factor for visual purposes. Defaults to <span class="math inline">\(1.10\)</span>. Typically does not require
+adjustment.</li>
+<li><code>ylim</code> takes in a <span class="math inline">\(2 \times
+1\)</span> vector that specifies limits of the y-axis in plots.</li>
+<li><code>y_scal_orig</code> a positive scalar that determines how much
+to reduce the length of the y-axis on the bottom. Typically does not
+require adjustment. Defaults to 0.05.</li>
+<li><code>xlab</code> takes in a string for the x-axis title (i.e., the
+functional domain). Defaults to ``Time (s)’’</li>
+</ul>
+</div>
+</div>
+<div id="troubleshooting" class="section level2">
+<h2>Troubleshooting</h2>
+<p>Issues can be raised at the development version repo <a href="https://github.com/awqx/fastFMM">awqx/fastFMM</a>. You are also
+welcome to personally contact us at <a href="mailto:gloewinger@gmail.com" class="email">gloewinger@gmail.com</a> and <a href="mailto:axin@andrew.cmu.edu" class="email">axin@andrew.cmu.edu</a>
+with any questions or error reports that are not directly related to
+bugs in the code.</p>
+<div id="common-warning-messages" class="section level3">
+<h3>Common warning messages</h3>
+<p><code>Warning messages: 1: In sqrt(Eigen\$values) : NaNs produced</code>.
+This can occur when using bootstrap confidence intervals because of the
+application of functional PCA. It can be safely ignored.</p>
+<p><code>Warning in checkConv(attr(opt, &quot;derivs&quot;), opt, ctrl = control checkConv: Model failed to converge with max|grad</code>.
+This is a<code>lme4</code> warning message. For data sets with many
+observations or for models with many parameters (e.g., random effects,
+fixed effects), convergence warnings are not uncommon. This warning
+message comes from point-wise mixed model fits. Therefore if these
+warnings are issued for many points along the functional domain, you may
+want to consider your fixed or random effect specification. If the
+warning is only issued for a few points on the functional domain, you
+may not need to alter your model specification.</p>
+<p><code>Warning in checkConv(attr(opt, &quot;derivs&quot;), opt.par, ctrl = control.checkConv, : Model is nearly unidentifiable: very large eigenvalue: - Rescale variables? Model is nearly unidentifiable: large eigenvalue ratio</code>.
+This is a<code>lme4</code>warning message. This warning can frequently
+be resolved by scaling continuous covariates, for example, with the
+command <code>scale()</code>. For more information on
+the<code>lme4\</code> package, warning messages, model syntax and
+general mixed modeling information, see <span class="citation">Pinheiro,
+Bates, and R Core Team (<a href="#ref-nlme_2025">2025</a>)</span>.</p>
+</div>
+</div>
+<div id="references" class="section level2 unnumbered">
+<h2 class="unnumbered">References</h2>
+<div id="refs" class="references csl-bib-body hanging-indent" entry-spacing="0">
+<div id="ref-cui_fast_2022" class="csl-entry">
+Cui, Erjia, Andrew Leroux, Ekaterina Smirnova, and Ciprian M.
+Crainiceanu. 2022. <span>“Fast <span>Univariate</span>
+<span>Inference</span> for <span>Longitudinal</span>
+<span>Functional</span> <span>Models</span>.”</span> <em>Journal of
+Computational and Graphical Statistics</em> 31 (1): 219–30. <a href="https://doi.org/10.1080/10618600.2021.1950006">https://doi.org/10.1080/10618600.2021.1950006</a>.
+</div>
+<div id="ref-jeong_mesolimbic_2022" class="csl-entry">
+Jeong, Huijeong, Annie Taylor, Joseph R. Floeder, Martin Lohmann, Stefan
+Mihalas, Brenda Wu, Mingkang Zhou, Dennis A. Burke, and Vijay Mohan K.
+Namboodiri. 2022. <span>“Mesolimbic Dopamine Release Conveys Causal
+Associations.”</span> <em>Science</em> 378 (6626): eabq6740. <a href="https://doi.org/10.1126/science.abq6740">https://doi.org/10.1126/science.abq6740</a>.
+</div>
+<div id="ref-loewinger_statistical_2025" class="csl-entry">
+Loewinger, Gabriel, Erjia Cui, David Lovinger, and Francisco Pereira.
+2025. <span>“A Statistical Framework for Analysis of Trial-Level
+Temporal Dynamics in Fiber Photometry Experiments.”</span>
+<em>eLife</em> 13 (March): RP95802. <a href="https://doi.org/10.7554/eLife.95802">https://doi.org/10.7554/eLife.95802</a>.
+</div>
+<div id="ref-nlme_2025" class="csl-entry">
+Pinheiro, José, Douglas Bates, and R Core Team. 2025. <em>Nlme: Linear
+and Nonlinear Mixed Effects Models</em>. <a href="https://doi.org/10.32614/CRAN.package.nlme">https://doi.org/10.32614/CRAN.package.nlme</a>.
+</div>
+<div id="ref-xin_capturing_2025" class="csl-entry">
+Xin, Al W., Erjia Cui, Francisco Pereira, and Gabriel Loewinger. 2025.
+<span>“Capturing Instantaneous Neural Signal-Behavior Relationships with
+Concurrent Functional Mixed Models.”</span> bioRxiv. <a href="https://doi.org/10.1101/2025.09.08.671383">https://doi.org/10.1101/2025.09.08.671383</a>.
+</div>
+</div>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

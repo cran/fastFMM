@@ -19,16 +19,19 @@ fui(
   splines = "tp",
   design_mat = FALSE,
   residuals = FALSE,
-  num_boots = 500,
+  n_boots = 500,
   boot_type = NULL,
   seed = 1,
-  subj_ID = NULL,
-  num_cores = 1,
+  subj_id = NULL,
+  n_cores = NULL,
   caic = FALSE,
-  REs = FALSE,
+  randeffs = FALSE,
   non_neg = 0,
   MoM = 1,
-  impute_outcome = FALSE
+  concurrent = FALSE,
+  impute_outcome = FALSE,
+  override_zero_var = FALSE,
+  unsmooth = FALSE
 )
 }
 \arguments{
@@ -42,7 +45,7 @@ of the longitudinal functional observations on the domain.}
 \item{family}{GLM family of the response. Defaults to \code{gaussian}.}
 
 \item{var}{Logical, indicating whether to calculate and return variance
-of the coefficient estimates. Defaults to \code{TRUE}.}
+of the coefficient estimates. Defaults to `TRUE`.}
 
 \item{analytic}{Logical, indicating whether to use the analytic inferenc
 approach or bootstrap. Defaults to \code{TRUE}.}
@@ -79,7 +82,7 @@ Defaults to \code{FALSE}}
 \item{residuals}{Logical, indicating whether to save residuals from
 unsmoothed LME. Defaults to \code{FALSE}.}
 
-\item{num_boots}{Number of samples when using bootstrap inference. Defaults
+\item{n_boots}{Number of samples when using bootstrap inference. Defaults
 to 500.}
 
 \item{boot_type}{Bootstrap type (character): "cluster", "case", "wild",
@@ -90,14 +93,15 @@ small cluster (n<=10) gaussian responses, defaults to "reb".}
 \item{seed}{Numeric value used to make sure bootstrap replicate (draws) are
 correlated across functional domains for certain bootstrap approach}
 
-\item{subj_ID}{Name of the variable that contains subject ID.}
+\item{subj_id}{Name of the variable that contains subject ID.}
 
-\item{num_cores}{Number of cores for parallelization. Defaults to 1.}
+\item{n_cores}{Number of cores for parallelization. If not specified,
+defaults to 3/4ths of detected cores.}
 
 \item{caic}{Logical, indicating whether to calculate cAIC. Defaults to
 \code{FALSE}.}
 
-\item{REs}{Logical, indicating whether to return random effect estimates.
+\item{randeffs}{Logical, indicating whether to return random effect estimates.
 Defaults to \code{FALSE}.}
 
 \item{non_neg}{0 - no non-negativity constrains, 1 - non-negativity
@@ -106,22 +110,34 @@ average of coefficents for 1 variance term. Defaults to 0.}
 
 \item{MoM}{Method of moments estimator. Defaults to 1.}
 
-\item{impute_outcome}{Logical, indicating whether to impute missing outcome
-values with FPCA. This has not been tested thoroughly so use with caution.
+\item{concurrent}{Logical, indicates whether to fit a concurrent model.
 Defaults to \code{FALSE}.}
+
+\item{impute_outcome}{Logical, indicates whether to impute missing outcome
+values with FPCA. Defaults to \code{FALSE}. Use with caution as the
+downstream effects are not tested.}
+
+\item{override_zero_var}{Logical, indicates whether to proceed with model
+fitting if columns have zero variance. Suggested for cases where individual
+columns have zero variance but interactions have non-zero variance. Defaults
+to `FALSE`.}
+
+\item{unsmooth}{Logical, indicates whether to return the raw estimates of
+coefficients and variances without smoothing. Defaults to `FALSE`.}
 }
 \value{
 A list containing:
 \item{betaHat}{Estimated functional fixed effects}
 \item{argvals}{Location of the observations}
-\item{betaHat.var}{Variance estimates of the functional fixed effects (if specified)}
+\item{betaHat.var}{Variance estimates of the functional fixed effects
+(if specified)}
 \item{qn}{critical values used to construct joint CI}
 \item{...}{...}
 }
 \description{
 Fit a function-on-scalar regression model for longitudinal
 functional outcomes and scalar predictors using the Fast Univariate
-Inference (FUI) approach (Cui et al. 2022; Loewinger et al. 2024).
+Inference (FUI) approach (Cui et al. 2022).
 }
 \details{
 The FUI approach comprises of three steps:
@@ -134,8 +150,7 @@ approach for Gaussian data or Bootstrap for general distributions.
 }
 
 For more information on each step, please refer to the FUI paper
-by Cui et al. (2022). For more information on the method of moments estimator 
-applied in step 3, see Loewinger et al. (2024).
+by Cui et al. (2022).
 }
 \examples{
 library(refund)
@@ -143,8 +158,10 @@ library(refund)
 ## random intercept only
 set.seed(1)
 DTI_use <- DTI[DTI$ID \%in\% sample(DTI$ID, 10),]
+## clean conflicting predictor
+DTI_use$visit.time <- NULL
 fit_dti <- fui(
-  cca ~ case + visit + sex + (1 | ID),
+  cca ~ visit + sex + (1 | ID),
   data = DTI_use
 )
 }
@@ -152,12 +169,8 @@ fit_dti <- fui(
 Cui, E., Leroux, A., Smirnova, E., Crainiceanu, C. (2022). Fast
 Univariate Inference for Longitudinal Functional Models. \emph{Journal of
 Computational and Graphical Statistics}, 31(1), 219-230.
-
-Loewinger, G., Cui, E., Lovinger, D., Pereira, F. (2024). A 
-Statistical Framework for Analysis of Trial-Level Temporal Dynamics in 
-Fiber Photometry Experiments. \emph{eLife}, 95802.
 }
 \author{
 Erjia Cui \email{ecui@umn.edu}, Gabriel Loewinger
-\email{gloewinger@gmail.com}
+\email{gloewinger@gmail.com}, Al W Xin \email{axin@andrew.cmu.edu}
 }
